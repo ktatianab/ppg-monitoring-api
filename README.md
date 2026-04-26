@@ -6,7 +6,7 @@ This is a RESTful API built with FastAPI for PPG (Photoplethysmography) monitori
 
 ## Features
 
-- Application user management  
+- Application user management
 - Country and city administration  
 - Health records and measurements  
 - Support for wearable devices and models  
