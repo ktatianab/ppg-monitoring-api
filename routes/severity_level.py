@@ -12,10 +12,10 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.SeverityLevelResponse)
 def create_severity(data: schemas.SeverityLevelCreate, db: Session = Depends(get_db)):
-    existing = db.query(models.SeverityLeveltyLevel).filter(
+    existing = db.query(models.SeverityLevel).filter(
         models.SeverityLevel.name == data.name
     ).first()
-
+ 
     if existing:
         raise HTTPException(status_code=400, detail="Severity already exists")
 

@@ -10,7 +10,7 @@ router = APIRouter(
     tags=["Countries"]
 )
 
-# CREATE
+
 @router.post("/", response_model=schemas.CountryResponse, status_code=201)
 def create_country(country: schemas.CountryCreate, db: Session = Depends(get_db)):
     db_country = models.Country(
@@ -21,12 +21,10 @@ def create_country(country: schemas.CountryCreate, db: Session = Depends(get_db)
     db.refresh(db_country)
     return db_country
 
-# READ
 @router.get("/", response_model=List[schemas.CountryResponse])
 def get_countries(db: Session = Depends(get_db)):
     return db.query(models.Country).all()
 
-# READ ID
 @router.get("/{country_id}", response_model=schemas.CountryResponse)
 def get_country(country_id: int, db: Session = Depends(get_db)):
     country = db.query(models.Country).filter(
@@ -38,7 +36,24 @@ def get_country(country_id: int, db: Session = Depends(get_db)):
 
     return country
 
-# DELETE ID
+@router.put("/{country_id}", response_model=schemas.CountryResponse)
+def update_country(country_id: int, data: schemas.CountryCreate, db: Session = Depends(get_db)):
+
+    country = db.query(models.Country).filter(
+        models.Country.id_country == country_id
+    ).first()
+
+    if country is None:
+        raise HTTPException(status_code=404, detail="País no encontrado")
+
+    # Actualizar campos
+    country.name = data.name
+
+    db.commit()
+    db.refresh(country)
+
+    return country
+
 @router.delete("/{country_id}", status_code=204)
 def delete_country(country_id: int, db: Session = Depends(get_db)):
     country = db.query(models.Country).filter(

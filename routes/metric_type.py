@@ -27,11 +27,9 @@ def create_metric_type(data: schemas.MetricTypeCreate, db: Session = Depends(get
 
     return metric_type
 
-
 @router.get("/", response_model=list[schemas.MetricTypeResponse])
 def get_metric_types(db: Session = Depends(get_db)):
     return db.query(models.MetricType).all()
-
 
 @router.get("/{id_metric_type}", response_model=schemas.MetricTypeResponse)
 def get_metric_type(id_metric_type: int, db: Session = Depends(get_db)):
@@ -43,7 +41,6 @@ def get_metric_type(id_metric_type: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Metric type not found")
 
     return metric_type
-
 
 @router.put("/{id_metric_type}", response_model=schemas.MetricTypeResponse)
 def update_metric_type(
@@ -68,7 +65,6 @@ def update_metric_type(
     db.refresh(metric_type)
 
     return metric_type
-
 
 @router.delete("/{id_metric_type}")
 def delete_metric_type(id_metric_type: int, db: Session = Depends(get_db)):

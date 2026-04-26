@@ -10,11 +10,10 @@ router = APIRouter(
     tags=["Wearables"]
 )
 
-# CREATE
 @router.post("/", response_model=schemas.WearableResponse)
 def create_wearable(data: schemas.WearableCreate, db: Session = Depends(get_db)):
 
-    user = db.query(models.AppUser).filter(models.AppUser.id_user == data.id_user).first()
+    user = db.query(models.App_user).filter(models.App_user.id_user == data.id_user).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -32,12 +31,10 @@ def create_wearable(data: schemas.WearableCreate, db: Session = Depends(get_db))
 
     return wearable
 
-# READ
 @router.get("/", response_model=list[schemas.WearableResponse])
 def get_wearables(db: Session = Depends(get_db)):
     return db.query(models.Wearable).all()
 
-# READ ID
 @router.get("/{id_wearable}", response_model=schemas.WearableResponse)
 def get_wearable(id_wearable: int, db: Session = Depends(get_db)):
     wearable = db.query(models.Wearable).filter(
@@ -49,7 +46,12 @@ def get_wearable(id_wearable: int, db: Session = Depends(get_db)):
 
     return wearable
 
-# DELETE ID
+@router.get("/user/{id_user}", response_model=list[schemas.WearableResponse])
+def get_user_wearables(id_user: int, db: Session = Depends(get_db)):
+    return db.query(models.Wearable).filter(
+        models.Wearable.id_user == id_user
+    ).all()
+
 @router.delete("/{id_wearable}")
 def delete_wearable(id_wearable: int, db: Session = Depends(get_db)):
     wearable = db.query(models.Wearable).filter(
@@ -64,9 +66,3 @@ def delete_wearable(id_wearable: int, db: Session = Depends(get_db)):
 
     return {"message": "Wearable deleted"}
 
-#USER WEARABLES
-@router.get("/user/{id_user}", response_model=list[schemas.WearableResponse])
-def get_user_wearables(id_user: int, db: Session = Depends(get_db)):
-    return db.query(models.Wearable).filter(
-        models.Wearable.id_user == id_user
-    ).all()

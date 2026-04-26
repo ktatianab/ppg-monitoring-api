@@ -60,3 +60,30 @@ def create_samples_bulk(data: list[schemas.PpgSampleCreate], db: Session = Depen
     db.commit()
 
     return {"inserted": len(samples)}
+
+@router.put("/{id_sample}", response_model=schemas.PpgSampleResponse)
+def update_sample(id_sample: int, data: schemas.PpgSampleCreate, db: Session = Depends(get_db)):
+
+    sample = db.query(models.PpgSample).filter(
+        models.PpgSample.id_ppg_sample == id_sample
+    ).first()
+
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    # Validar que la sesión exista
+    session = db.query(models.MonitoringSession).filter(
+        models.MonitoringSession.id_session == data.id_session
+    ).first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Actualizar campos
+    for key, value in data.dict().items():
+        setattr(sample, key, value)
+
+    db.commit()
+    db.refresh(sample)
+
+    return sample

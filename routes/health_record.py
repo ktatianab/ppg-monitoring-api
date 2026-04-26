@@ -10,11 +10,10 @@ router = APIRouter(
     tags=["Health Records"]
 )
 
-#CREATE
 @router.post("/", response_model=schemas.HealthRecordResponse)
 def create_health_record(data: schemas.HealthRecordCreate, db: Session = Depends(get_db)):
     
-    user = db.query(models.AppUser).filter(models.AppUser.id_user == data.id_user).first()
+    user = db.query(models.App_user).filter(models.App_user.id_user == data.id_user).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -30,12 +29,10 @@ def create_health_record(data: schemas.HealthRecordCreate, db: Session = Depends
 
     return record
 
-#READ
 @router.get("/", response_model=list[schemas.HealthRecordResponse])
 def get_records(db: Session = Depends(get_db)):
     return db.query(models.HealthRecord).all()
 
-#READ by ID
 @router.get("/{id_record}", response_model=schemas.HealthRecordResponse)
 def get_record(id_record: int, db: Session = Depends(get_db)):
     record = db.query(models.HealthRecord).filter(
@@ -47,7 +44,6 @@ def get_record(id_record: int, db: Session = Depends(get_db)):
 
     return record
 
-#UPDATE
 @router.put("/{id_record}", response_model=schemas.HealthRecordResponse)
 def update_record(
     id_record: int,
@@ -70,7 +66,6 @@ def update_record(
 
     return record
 
-#DELETE
 @router.delete("/{id_record}")
 def delete_record(id_record: int, db: Session = Depends(get_db)):
     record = db.query(models.HealthRecord).filter(

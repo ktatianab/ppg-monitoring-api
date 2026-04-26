@@ -11,8 +11,6 @@ router = APIRouter(
 )
 
 
-
-
 @router.post("/", response_model=schemas.MeasurementResponse)
 def create_measurement(data: schemas.MeasurementCreate, db: Session = Depends(get_db)):
     metric_type = db.query(models.MetricType).filter(
@@ -37,11 +35,9 @@ def create_measurement(data: schemas.MeasurementCreate, db: Session = Depends(ge
 
     return measurement
 
-
 @router.get("/", response_model=list[schemas.MeasurementResponse])
 def get_measurements(db: Session = Depends(get_db)):
     return db.query(models.Measurement).all()
-
 
 @router.get("/{id_measurement}", response_model=schemas.MeasurementResponse)
 def get_measurement(id_measurement: int, db: Session = Depends(get_db)):
@@ -54,13 +50,11 @@ def get_measurement(id_measurement: int, db: Session = Depends(get_db)):
 
     return measurement
 
-
 @router.get("/session/{id_session}", response_model=list[schemas.MeasurementResponse])
 def get_measurements_by_session(id_session: int, db: Session = Depends(get_db)):
     return db.query(models.Measurement).filter(
         models.Measurement.id_session == id_session
     ).all()
-
 
 @router.put("/{id_measurement}", response_model=schemas.MeasurementResponse)
 def update_measurement(
@@ -84,7 +78,6 @@ def update_measurement(
     db.refresh(measurement)
 
     return measurement
-
 
 @router.delete("/{id_measurement}")
 def delete_measurement(id_measurement: int, db: Session = Depends(get_db)):

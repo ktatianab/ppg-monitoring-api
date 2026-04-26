@@ -4,19 +4,18 @@ from typing import List
 
 import DTO.models as models, ORM.schemas as schemas
 from DAO.database import get_db
-
-router = APIRouter(
+ 
+router = APIRouter( 
     prefix="/monitoring_sessions",
     tags=["MonitoringSessions"]
 )
 
-# CREATE
 @router.post("/", response_model=schemas.MonitoringSessionResponse)
 def create_monitoring_session(
     data: schemas.MonitoringSessionCreate,
     db: Session = Depends(get_db)
 ):
-    user = db.query(models.AppUser).filter(models.AppUser.id_user == data.id_user).first()
+    user = db.query(models.App_user).filter(models.App_user.id_user == data.id_user).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -29,11 +28,9 @@ def create_monitoring_session(
 
     return session
 
-
 @router.get("/", response_model=list[schemas.MonitoringSessionResponse])
 def get_monitoring_sessions(db: Session = Depends(get_db)):
     return db.query(models.MonitoringSession).all()
-
 
 @router.get("/{id_session}", response_model=schemas.MonitoringSessionResponse)
 def get_monitoring_session(id_session: int, db: Session = Depends(get_db)):
@@ -46,7 +43,6 @@ def get_monitoring_session(id_session: int, db: Session = Depends(get_db)):
 
     return session
 
-
 @router.get("/user/{id_user}", response_model=list[schemas.MonitoringSessionResponse])
 def get_monitoring_sessions_by_user(
     id_user: int,
@@ -55,7 +51,6 @@ def get_monitoring_sessions_by_user(
     return db.query(models.MonitoringSession).filter(
         models.MonitoringSession.id_user == id_user
     ).all()
-
 
 @router.put("/{id_session}", response_model=schemas.MonitoringSessionResponse)
 def update_monitoring_session(
@@ -79,7 +74,6 @@ def update_monitoring_session(
     db.refresh(session)
 
     return session
-
 
 @router.delete("/{id_session}")
 def delete_monitoring_session(id_session: int, db: Session = Depends(get_db)):

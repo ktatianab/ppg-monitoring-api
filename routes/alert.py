@@ -48,12 +48,44 @@ def get_alert(id_alert: int, db: Session = Depends(get_db)):
 
     return alert
 
-
 @router.get("/session/{id_session}", response_model=list[schemas.AlertResponse])
 def get_alerts_by_session(id_session: int, db: Session = Depends(get_db)):
     return db.query(models.Alert).filter(
         models.Alert.id_session == id_session
     ).all()
+
+@router.put("/{id_alert}", response_model=schemas.AlertResponse)
+def update_alert(id_alert: int, data: schemas.AlertCreate, db: Session = Depends(get_db)):
+    
+    alert = db.query(models.Alert).filter(
+        models.Alert.id_alert == id_alert
+    ).first()
+
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    # Validar session
+    session = db.query(models.MonitoringSession).filter(
+        models.MonitoringSession.id_session == data.id_session
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Validar severity
+    severity = db.query(models.SeverityLevel).filter(
+        models.SeverityLevel.id_severity_level == data.id_severity_level
+    ).first()
+    if not severity:
+        raise HTTPException(status_code=404, detail="Severity level not found")
+
+   
+    for key, value in data.dict().items():
+        setattr(alert, key, value)
+
+    db.commit()
+    db.refresh(alert)
+
+    return alert
 
 @router.delete("/{id_alert}")
 def delete_alert(id_alert: int, db: Session = Depends(get_db)):

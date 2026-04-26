@@ -5,24 +5,25 @@ from sqlalchemy.orm import relationship
 from DAO.database import Base
 
 class Country(Base):
-    __tablename__ = "Country"
+    __tablename__ = "country"
 
-    id_country          = Column(Integer, primary_key=True, index=True)
-    name   = Column(String(100), nullable=False)
+    id_country = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
 
 
 class City(Base):
-    __tablename__ = "City"
+    __tablename__ = "city"
 
     id_city = Column(Integer, primary_key=True, index=True)
     id_country = Column(Integer, ForeignKey("country.id_country"), nullable=False)
     name = Column(String(100), nullable=False)
 
-    users = relationship("AppUser", back_populates="city")
+    users = relationship("App_user", back_populates="city")
+    id_country = Column(Integer, ForeignKey("country.id_country"), nullable=False)
 
 
 class App_user(Base):
-    __tablename__ = "App_user"
+    __tablename__ = "app_user"
 
     id_user = Column(Integer, primary_key=True, index=True)
     id_city = Column(Integer, ForeignKey("city.id_city"), nullable=False)
@@ -35,19 +36,23 @@ class App_user(Base):
     birth_date = Column(Date, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now()
-    )
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relaciones
+   
     city = relationship("City", back_populates="users")
     health_records = relationship(
         "HealthRecord",
         back_populates="user",
         cascade="all, delete-orphan"
     )
+
+    wearables = relationship("Wearable", back_populates="user")
+
+    monitoring_sessions = relationship(
+    "MonitoringSession",
+    back_populates="user"
+)
+
 
 class HealthRecord(Base):
     __tablename__ = "health_record"
@@ -59,7 +64,8 @@ class HealthRecord(Base):
     height_cm = Column(DECIMAL(5, 1), nullable=False)
     recorded_at = Column(DateTime, server_default=func.now())
 
-    user = relationship("AppUser", back_populates="health_records")
+    user = relationship("App_user", back_populates="health_records")
+
 
 class WearableModel(Base):
     __tablename__ = "wearable_model"
@@ -68,7 +74,33 @@ class WearableModel(Base):
     brand = Column(String(50), nullable=False)
     model = Column(String(50), nullable=False)
 
-    wearables = relationship("Wearable", back_populates="wearable_model")
+    # Relación con Wearable (1 a muchos)
+    wearables = relationship(
+        "Wearable",
+        back_populates="wearable_model",
+        cascade="all, delete-orphan"
+    )
+
+class Wearable(Base):
+    __tablename__ = "wearable"
+
+    id_wearable = Column(Integer, primary_key=True, index=True)
+    id_wearable_model = Column(Integer, ForeignKey("wearable_model.id_wearable_model"), nullable=False)
+    id_user = Column(Integer, ForeignKey("app_user.id_user"), nullable=False) 
+    
+    mac_address = Column(String(100), unique=True, nullable=False)
+
+    wearable_model = relationship("WearableModel", back_populates="wearables")
+
+    user = relationship("App_user", back_populates="wearables")
+    wearable_model = relationship("WearableModel", back_populates="wearables")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+    DateTime(timezone=True),
+    server_default=func.now(),
+    onupdate=func.now()
+) 
 
 
 class MonitoringSession(Base):
@@ -76,7 +108,10 @@ class MonitoringSession(Base):
 
     id_session = Column(Integer, primary_key=True, index=True)
     id_user = Column(Integer, ForeignKey("app_user.id_user"), nullable=False)
-    id_compute_status = Column(BigInteger, nullable=False)
+    id_compute_status = Column(
+    BigInteger,
+    ForeignKey("compute_status.id_compute_status"),
+    nullable=False)   
 
     date_time = Column(DateTime, nullable=False)
 
@@ -85,7 +120,7 @@ class MonitoringSession(Base):
 
     is_delta_encoded = Column(Boolean, nullable=False, default=False)
 
-    user = relationship("AppUser", back_populates="monitoring_sessions")
+    user = relationship("App_user", back_populates="monitoring_sessions")
 
     measurements = relationship(
         "Measurement",
@@ -98,11 +133,15 @@ class MonitoringSession(Base):
         back_populates="session",
         cascade="all, delete-orphan"
     )
+
     compute_status = relationship("ComputeStatus", back_populates="sessions")
+
     ppg_samples = relationship(
     "PpgSample",
     back_populates="session",
     cascade="all, delete-orphan")
+
+    user = relationship("App_user", back_populates="monitoring_sessions")
 
 
 class MetricType(Base):
