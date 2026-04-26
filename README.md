@@ -24,20 +24,13 @@ This is a RESTful API built with FastAPI for PPG (Photoplethysmography) monitori
 ### Installation Steps
 
 1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd ppg-api
-
-   
-### Pasos de instalación
-
-1. Clona el repositorio:
+2. 
    ```bash
    git clone <url-del-repositorio>
    cd ppg-api
    ```
 
-2. Crea un entorno virtual:
+3. Create a virtual environment:
    ```bash
    python -m venv .venv
    # En Windows:
@@ -46,69 +39,60 @@ This is a RESTful API built with FastAPI for PPG (Photoplethysmography) monitori
    source .venv/bin/activate
    ```
 
-3. Instala las dependencias:
+4. Install dependencies:
    ```bash
    pip install -r requeriment.txt
    ```
 
-4. Configura la base de datos PostgreSQL:
-   - Crea una base de datos llamada `PPG_DB`
-   - Actualiza la URL de la base de datos en `DAO/database.py` si es necesario
+5. Install dependencies:
+  Configure the PostgreSQL database:
+Create a database named PPG_DB
+Update the database URL in DAO/database.py if necessary
+Run migrations (if available) or create tables manually based on the models in DTO/models.py
+Usage
 
-5. Ejecuta las migraciones (si las tienes) o crea las tablas manualmente basándote en los modelos en `DTO/models.py`
+To run the application:
 
-## Uso
-
-Para ejecutar la aplicación:
-
-```bash
 uvicorn main:app --reload
-```
 
-La API estará disponible en `http://127.0.0.1:8000`
+The API will be available at http://127.0.0.1:8000
 
-### Documentación de la API
+API Documentation
 
-FastAPI proporciona documentación automática en:
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
+FastAPI provides automatic documentation at:
 
-## Estructura del proyecto
+Swagger UI: http://127.0.0.1:8000/docs
+ReDoc: http://127.0.0.1:8000/redoc
+Project Structure
+main.py: FastAPI application entry point
+DAO/: Data access layer
+database.py: Database configuration
+DTO/: Data transfer objects
+models.py: SQLAlchemy models
+ORM/: Pydantic schemas
+schemas.py: Schemas for validation and serialization
+routes/: API routes/endpoints
+alert.py, app_user.py, etc.: Endpoints for each entity
+Main Endpoints
+/App_users: User management
+/countries: Countries
+/cities: Cities
+/health_records: Health records
+/wearables: Wearable devices
+/monitoring_sessions: Monitoring sessions
+/measurements: Measurements
+/alerts: Alerts
+/ppg_samples: PPG samples
+Contribution
+Fork the project
+Create a feature branch (git checkout -b feature/AmazingFeature)
+Commit your changes (git commit -m 'Add some AmazingFeature')
+Push to the branch (git push origin feature/AmazingFeature)
+Open a Pull Request
+License
 
-- `main.py`: Punto de entrada de la aplicación FastAPI
-- `DAO/`: Capa de acceso a datos
-  - `database.py`: Configuración de la base de datos
-- `DTO/`: Objetos de transferencia de datos
-  - `models.py`: Modelos de SQLAlchemy
-- `ORM/`: Esquemas Pydantic
-  - `schemas.py`: Esquemas para validación y serialización
-- `routes/`: Rutas/endpoints de la API
-  - `alert.py`, `app_user.py`, etc.: Endpoints para cada entidad
+This project is licensed under the MIT License. See the LICENSE file for more details.
 
-## Endpoints principales
+Contact
 
-- `/App_users`: Gestión de usuarios
-- `/countries`: Países
-- `/cities`: Ciudades
-- `/health_records`: Registros de salud
-- `/wearables`: Dispositivos wearables
-- `/monitoring_sessions`: Sesiones de monitoreo
-- `/measurements`: Mediciones
-- `/alerts`: Alertas
-- `/ppg_samples`: Muestras PPG
-
-## Contribución
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
-
-## Contacto
-
-Para preguntas o soporte, contacta al equipo de desarrollo.
+For questions or support, contact the development team.
