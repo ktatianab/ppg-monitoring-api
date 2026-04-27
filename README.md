@@ -31,6 +31,7 @@ This is a RESTful API built with FastAPI for PPG (Photoplethysmography) monitori
    ```
 
 2. Create a virtual environment:
+
    ```bash
    python -m venv .venv
    # En Windows:
@@ -40,13 +41,18 @@ This is a RESTful API built with FastAPI for PPG (Photoplethysmography) monitori
    ```
 
 3. Install dependencies:
+
    ```bash
    pip install -r requeriment.txt
    ```
 
-4. Create a database named PPG_DB
-Update the database URL in DAO/database.py if necessary
+4. Load environment variables:
 
+   ```bash
+   cp .env.example .env
+   # Modify .env with your database credentials. Default PPG_DB on localhost:5432.
+   set -a && source .env && set +a
+   ```
 
 5. Run migrations (if available) or create tables manually based on the models in DTO/models.py
 Usage
