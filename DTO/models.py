@@ -86,21 +86,19 @@ class Wearable(Base):
 
     id_wearable = Column(Integer, primary_key=True, index=True)
     id_wearable_model = Column(Integer, ForeignKey("wearable_model.id_wearable_model"), nullable=False)
-    id_user = Column(Integer, ForeignKey("app_user.id_user"), nullable=False) 
-    
+    id_user = Column(Integer, ForeignKey("app_user.id_user"), nullable=False)
+
     mac_address = Column(String(100), unique=True, nullable=False)
 
     wearable_model = relationship("WearableModel", back_populates="wearables")
-
     user = relationship("App_user", back_populates="wearables")
-    wearable_model = relationship("WearableModel", back_populates="wearables")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
-    DateTime(timezone=True),
-    server_default=func.now(),
-    onupdate=func.now()
-) 
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
 
 
 class MonitoringSession(Base):

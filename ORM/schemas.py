@@ -159,7 +159,7 @@ class MeasurementResponse(BaseModel):
     id_measurement: int
     id_metric_type: int
     id_session: int
-    value: Decimal
+    value: Optional[Decimal] = None
     error_message: str | None
     recorded_at: datetime
 

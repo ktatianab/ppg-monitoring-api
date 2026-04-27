@@ -52,6 +52,42 @@ def get_user_wearables(id_user: int, db: Session = Depends(get_db)):
         models.Wearable.id_user == id_user
     ).all()
 
+@router.put("/{id_wearable}", response_model=schemas.WearableResponse)
+def update_wearable(
+    id_wearable: int,
+    data: schemas.WearableCreate,
+    db: Session = Depends(get_db)
+):
+    wearable = db.query(models.Wearable).filter(
+        models.Wearable.id_wearable == id_wearable
+    ).first()
+
+    if not wearable:
+        raise HTTPException(status_code=404, detail="Wearable not found")
+
+    # Validar usuario
+    user = db.query(models.App_user).filter(
+        models.App_user.id_user == data.id_user
+    ).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+   
+    model = db.query(models.WearableModel).filter(
+        models.WearableModel.id_wearable_model == data.id_wearable_model
+    ).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Wearable model not found")
+
+
+    for key, value in data.dict().items():
+        setattr(wearable, key, value)
+
+    db.commit()
+    db.refresh(wearable)
+
+    return wearable
+
 @router.delete("/{id_wearable}")
 def delete_wearable(id_wearable: int, db: Session = Depends(get_db)):
     wearable = db.query(models.Wearable).filter(

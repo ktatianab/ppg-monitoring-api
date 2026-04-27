@@ -27,7 +27,7 @@ def create_measurement(data: schemas.MeasurementCreate, db: Session = Depends(ge
     if not session:
         raise HTTPException(status_code=404, detail="Monitoring session not found")
 
-    measurement = models.Measurementurement(**data.dict())
+    measurement = models.Measurement(**data.dict())
 
     db.add(measurement)
     db.commit()
@@ -41,7 +41,7 @@ def get_measurements(db: Session = Depends(get_db)):
 
 @router.get("/{id_measurement}", response_model=schemas.MeasurementResponse)
 def get_measurement(id_measurement: int, db: Session = Depends(get_db)):
-    measurement = db.query(models.Measurementurement).filter(
+    measurement = db.query(models.Measurement).filter(
         models.Measurement.id_measurement == id_measurement
     ).first()
 
@@ -62,7 +62,7 @@ def update_measurement(
     data: schemas.MeasurementCreate,
     db: Session = Depends(get_db)
 ):
-    measurement = db.query(models.Measurementurement).filter(
+    measurement = db.query(models.Measurement).filter(
         models.Measurement.id_measurement == id_measurement
     ).first()
 
