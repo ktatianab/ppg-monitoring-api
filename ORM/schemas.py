@@ -217,8 +217,8 @@ class PpgSampleCreate(BaseModel):
     id_session: int
     ts: int
     green: int
-    red: int
-    ir: int
+    red: Optional[int]
+    ir: Optional[int]
 
 
 class PpgSampleResponse(BaseModel):
@@ -226,8 +226,8 @@ class PpgSampleResponse(BaseModel):
     id_session: int
     ts: int
     green: int
-    red: int
-    ir: int
+    red: Optional[int]
+    ir: Optional[int]
 
     class Config:
         from_attributes = True

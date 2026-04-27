@@ -225,7 +225,7 @@ class PpgSample(Base):
 
     ts = Column(BigInteger, nullable=False)
     green = Column(Integer, nullable=False)
-    red = Column(Integer, nullable=False)
-    ir = Column(Integer, nullable=False)
+    red = Column(Integer, nullable=True)
+    ir = Column(Integer, nullable=True)
 
     session = relationship("MonitoringSession", back_populates="ppg_samples")
