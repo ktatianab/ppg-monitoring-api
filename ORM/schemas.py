@@ -213,12 +213,13 @@ class ComputeStatusResponse(BaseModel):
         from_attributes = True
 
 
+
 class PpgSampleCreate(BaseModel):
     id_session: int
     ts: int
     green: int
-    red: Optional[int]
-    ir: Optional[int]
+    red: Optional[int] = None
+    ir: Optional[int] = None
 
 
 class PpgSampleResponse(BaseModel):
@@ -226,8 +227,8 @@ class PpgSampleResponse(BaseModel):
     id_session: int
     ts: int
     green: int
-    red: Optional[int]
-    ir: Optional[int]
+    red: Optional[int] = None
+    ir: Optional[int] = None
 
     class Config:
         from_attributes = True
