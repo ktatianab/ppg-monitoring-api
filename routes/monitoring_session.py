@@ -1,21 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Optional
 
-import DTO.models as models, ORM.schemas as schemas
+import DTO.models as models
+import ORM.schemas as schemas
 from DAO.database import get_db
+from utils.query_builder import apply_get_query_params
  
 router = APIRouter( 
     prefix="/monitoring_sessions",
     tags=["MonitoringSessions"]
 )
 
+
 @router.post("/", response_model=schemas.MonitoringSessionResponse)
 def create_monitoring_session(
     data: schemas.MonitoringSessionCreate,
     db: Session = Depends(get_db)
 ):
-    user = db.query(models.App_user).filter(models.App_user.id_user == data.id_user).first()
+    user = db.query(models.App_user).filter(
+        models.App_user.id_user == data.id_user
+    ).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -28,9 +33,48 @@ def create_monitoring_session(
 
     return session
 
+
 @router.get("/", response_model=list[schemas.MonitoringSessionResponse])
-def get_monitoring_sessions(db: Session = Depends(get_db)):
-    return db.query(models.MonitoringSession).all()
+def get_monitoring_sessions(
+    query: Optional[str] = Query(
+        default=None,
+        description="Filter records. Example: id_user:1 or date_time__gte:1710000000"
+    ),
+    limit: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Maximum number of records to return"
+    ),
+    offset: Optional[int] = Query(
+        default=None,
+        ge=0,
+        description="Number of records to skip"
+    ),
+    orderBy: Optional[str] = Query(
+        default=None,
+        description="Field used to order the results"
+    ),
+    sort: Optional[str] = Query(
+        default="asc",
+        pattern="^(asc|desc)$",
+        description="Sort direction: asc or desc"
+    ),
+    db: Session = Depends(get_db)
+):
+    db_query = db.query(models.MonitoringSession)
+
+    db_query = apply_get_query_params(
+        db_query=db_query,
+        model=models.MonitoringSession,
+        query=query,
+        limit=limit,
+        offset=offset,
+        order_by=orderBy,
+        sort=sort
+    )
+
+    return db_query.all()
+
 
 @router.get("/{id_session}", response_model=schemas.MonitoringSessionResponse)
 def get_monitoring_session(id_session: int, db: Session = Depends(get_db)):
@@ -43,14 +87,51 @@ def get_monitoring_session(id_session: int, db: Session = Depends(get_db)):
 
     return session
 
+
 @router.get("/user/{id_user}", response_model=list[schemas.MonitoringSessionResponse])
 def get_monitoring_sessions_by_user(
     id_user: int,
+    query: Optional[str] = Query(
+        default=None,
+        description="Filter records. Example: id_compute_status:1"
+    ),
+    limit: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Maximum number of records to return"
+    ),
+    offset: Optional[int] = Query(
+        default=None,
+        ge=0,
+        description="Number of records to skip"
+    ),
+    orderBy: Optional[str] = Query(
+        default=None,
+        description="Field used to order the results"
+    ),
+    sort: Optional[str] = Query(
+        default="asc",
+        pattern="^(asc|desc)$",
+        description="Sort direction: asc or desc"
+    ),
     db: Session = Depends(get_db)
 ):
-    return db.query(models.MonitoringSession).filter(
+    db_query = db.query(models.MonitoringSession).filter(
         models.MonitoringSession.id_user == id_user
-    ).all()
+    )
+
+    db_query = apply_get_query_params(
+        db_query=db_query,
+        model=models.MonitoringSession,
+        query=query,
+        limit=limit,
+        offset=offset,
+        order_by=orderBy,
+        sort=sort
+    )
+
+    return db_query.all()
+
 
 @router.put("/{id_session}", response_model=schemas.MonitoringSessionResponse)
 def update_monitoring_session(
@@ -74,6 +155,7 @@ def update_monitoring_session(
     db.refresh(session)
 
     return session
+
 
 @router.delete("/{id_session}")
 def delete_monitoring_session(id_session: int, db: Session = Depends(get_db)):

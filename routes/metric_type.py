@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Optional
 
-import DTO.models as models, ORM.schemas as schemas
+import DTO.models as models
+import ORM.schemas as schemas
 from DAO.database import get_db
+from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
     prefix="/metric-types",
     tags=["Metric Types"]
 )
+
 
 @router.post("/", response_model=schemas.MetricTypeResponse)
 def create_metric_type(data: schemas.MetricTypeCreate, db: Session = Depends(get_db)):
@@ -27,9 +30,48 @@ def create_metric_type(data: schemas.MetricTypeCreate, db: Session = Depends(get
 
     return metric_type
 
+
 @router.get("/", response_model=list[schemas.MetricTypeResponse])
-def get_metric_types(db: Session = Depends(get_db)):
-    return db.query(models.MetricType).all()
+def get_metric_types(
+    query: Optional[str] = Query(
+        default=None,
+        description="Filter records. Example: name:heart_rate, unit:bpm or min_value__gte:0"
+    ),
+    limit: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Maximum number of records to return"
+    ),
+    offset: Optional[int] = Query(
+        default=None,
+        ge=0,
+        description="Number of records to skip"
+    ),
+    orderBy: Optional[str] = Query(
+        default=None,
+        description="Field used to order the results"
+    ),
+    sort: Optional[str] = Query(
+        default="asc",
+        pattern="^(asc|desc)$",
+        description="Sort direction: asc or desc"
+    ),
+    db: Session = Depends(get_db)
+):
+    db_query = db.query(models.MetricType)
+
+    db_query = apply_get_query_params(
+        db_query=db_query,
+        model=models.MetricType,
+        query=query,
+        limit=limit,
+        offset=offset,
+        order_by=orderBy,
+        sort=sort
+    )
+
+    return db_query.all()
+
 
 @router.get("/{id_metric_type}", response_model=schemas.MetricTypeResponse)
 def get_metric_type(id_metric_type: int, db: Session = Depends(get_db)):
@@ -41,6 +83,7 @@ def get_metric_type(id_metric_type: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Metric type not found")
 
     return metric_type
+
 
 @router.put("/{id_metric_type}", response_model=schemas.MetricTypeResponse)
 def update_metric_type(
@@ -65,6 +108,7 @@ def update_metric_type(
     db.refresh(metric_type)
 
     return metric_type
+
 
 @router.delete("/{id_metric_type}")
 def delete_metric_type(id_metric_type: int, db: Session = Depends(get_db)):
