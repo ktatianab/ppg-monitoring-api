@@ -1,18 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Optional
 
-import DTO.models as models, ORM.schemas as schemas
+import DTO.models as models
+import ORM.schemas as schemas
 from DAO.database import get_db
+from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
     prefix="/App_users",
     tags=["AppUsers"]
 )
 
+
 @router.post("/", response_model=schemas.AppUserResponse)
 def create_user(user: schemas.AppUserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(models.App_user).filter(models.App_user.email == user.email).first()
+    existing_user = db.query(models.App_user).filter(
+        models.App_user.email == user.email
+    ).first()
 
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -20,7 +25,7 @@ def create_user(user: schemas.AppUserCreate, db: Session = Depends(get_db)):
     db_user = models.App_user(
         id_city=user.id_city,
         email=user.email,
-        password_hash=user.password,  # idealmente aquí va el hash
+        password_hash=user.password,
         first_name=user.first_name,
         last_name=user.last_name,
         birth_date=user.birth_date
@@ -34,13 +39,52 @@ def create_user(user: schemas.AppUserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[schemas.AppUserResponse])
-def get_users(db: Session = Depends(get_db)):
-    return db.query(models.App_user).all()
+def get_users(
+    query: Optional[str] = Query(
+        default=None,
+        description="Filter records. Example: id_city:1, email__contains:gmail or first_name:Karen"
+    ),
+    limit: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Maximum number of records to return"
+    ),
+    offset: Optional[int] = Query(
+        default=None,
+        ge=0,
+        description="Number of records to skip"
+    ),
+    orderBy: Optional[str] = Query(
+        default=None,
+        description="Field used to order the results"
+    ),
+    sort: Optional[str] = Query(
+        default="asc",
+        pattern="^(asc|desc)$",
+        description="Sort direction: asc or desc"
+    ),
+    db: Session = Depends(get_db)
+):
+    db_query = db.query(models.App_user)
+
+    db_query = apply_get_query_params(
+        db_query=db_query,
+        model=models.App_user,
+        query=query,
+        limit=limit,
+        offset=offset,
+        order_by=orderBy,
+        sort=sort
+    )
+
+    return db_query.all()
 
 
 @router.get("/{id_user}", response_model=schemas.AppUserResponse)
 def get_user(id_user: int, db: Session = Depends(get_db)):
-    user = db.query(models.App_user).filter(models.App_user.id_user == id_user).first()
+    user = db.query(models.App_user).filter(
+        models.App_user.id_user == id_user
+    ).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -54,7 +98,9 @@ def update_user(
     user_data: schemas.AppUserCreate,
     db: Session = Depends(get_db)
 ):
-    user = db.query(models.App_user).filter(models.App_user.id_user == id_user).first()
+    user = db.query(models.App_user).filter(
+        models.App_user.id_user == id_user
+    ).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -74,7 +120,9 @@ def update_user(
 
 @router.delete("/{id_user}")
 def delete_user(id_user: int, db: Session = Depends(get_db)):
-    user = db.query(models.App_user).filter(models.App_user.id_user == id_user).first()
+    user = db.query(models.App_user).filter(
+        models.App_user.id_user == id_user
+    ).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

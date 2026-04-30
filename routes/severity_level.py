@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Optional
 
-import DTO.models as models, ORM.schemas as schemas
+import DTO.models as models
+import ORM.schemas as schemas
 from DAO.database import get_db
+from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
-    prefix="/security-levels",
-    tags=["Security Levels"]
+    prefix="/severity-levels",
+    tags=["Severity Levels"]
 )
+
 
 @router.post("/", response_model=schemas.SeverityLevelResponse)
 def create_severity(data: schemas.SeverityLevelCreate, db: Session = Depends(get_db)):
@@ -27,9 +30,48 @@ def create_severity(data: schemas.SeverityLevelCreate, db: Session = Depends(get
 
     return severity
 
+
 @router.get("/", response_model=list[schemas.SeverityLevelResponse])
-def get_severities(db: Session = Depends(get_db)):
-    return db.query(models.SeverityLevel).all()
+def get_severities(
+    query: Optional[str] = Query(
+        default=None,
+        description="Filter records. Example: name:High or description__contains:critical"
+    ),
+    limit: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Maximum number of records to return"
+    ),
+    offset: Optional[int] = Query(
+        default=None,
+        ge=0,
+        description="Number of records to skip"
+    ),
+    orderBy: Optional[str] = Query(
+        default=None,
+        description="Field used to order the results"
+    ),
+    sort: Optional[str] = Query(
+        default="asc",
+        pattern="^(asc|desc)$",
+        description="Sort direction: asc or desc"
+    ),
+    db: Session = Depends(get_db)
+):
+    db_query = db.query(models.SeverityLevel)
+
+    db_query = apply_get_query_params(
+        db_query=db_query,
+        model=models.SeverityLevel,
+        query=query,
+        limit=limit,
+        offset=offset,
+        order_by=orderBy,
+        sort=sort
+    )
+
+    return db_query.all()
+
 
 @router.get("/{id_severity_level}", response_model=schemas.SeverityLevelResponse)
 def get_severity(id_severity_level: int, db: Session = Depends(get_db)):
@@ -41,6 +83,7 @@ def get_severity(id_severity_level: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Severity not found")
 
     return severity
+
 
 @router.put("/{id_severity_level}", response_model=schemas.SeverityLevelResponse)
 def update_severity(
@@ -63,6 +106,7 @@ def update_severity(
 
     return severity
 
+
 @router.delete("/{id_severity_level}")
 def delete_severity(id_severity_level: int, db: Session = Depends(get_db)):
     severity = db.query(models.SeverityLevel).filter(
@@ -76,4 +120,3 @@ def delete_severity(id_severity_level: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"detail": "Severity deleted successfully"}
-
