@@ -28,7 +28,7 @@ def create_model(data: schemas.WearableModelCreate, db: Session = Depends(get_db
 def get_models(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: manufacturer:Apple or model_name__contains:Watch"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

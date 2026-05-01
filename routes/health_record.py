@@ -40,7 +40,7 @@ def create_health_record(data: schemas.HealthRecordCreate, db: Session = Depends
 def get_records(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_user:1 or weight_kg__gte:60"
+        description="Filter records.<miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

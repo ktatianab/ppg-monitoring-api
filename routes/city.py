@@ -39,7 +39,7 @@ def create_city(city: schemas.CityCreate, db: Session = Depends(get_db)):
 def get_cities(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_country:1, name:Bogotá or name__contains:Bog"
+        description="Filter records <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

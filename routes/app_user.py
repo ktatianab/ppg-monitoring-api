@@ -42,7 +42,7 @@ def create_user(user: schemas.AppUserCreate, db: Session = Depends(get_db)):
 def get_users(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_city:1, email__contains:gmail or first_name:Karen"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

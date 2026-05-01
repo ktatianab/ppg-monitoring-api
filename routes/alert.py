@@ -41,7 +41,7 @@ def create_alert(data: schemas.AlertCreate, db: Session = Depends(get_db)):
 def get_alerts(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_session:1 or id_severity_level:2"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

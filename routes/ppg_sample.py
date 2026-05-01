@@ -36,7 +36,7 @@ def create_sample(data: schemas.PpgSampleCreate, db: Session = Depends(get_db)):
 def get_samples(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_session:1 or green__gte:60"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

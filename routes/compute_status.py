@@ -28,7 +28,7 @@ def create_status(data: schemas.ComputeStatusCreate, db: Session = Depends(get_d
 def get_statuses(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: name:completed or description__contains:error"
+        description="Filter records <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

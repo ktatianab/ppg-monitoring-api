@@ -35,7 +35,7 @@ def create_severity(data: schemas.SeverityLevelCreate, db: Session = Depends(get
 def get_severities(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: name:High or description__contains:critical"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

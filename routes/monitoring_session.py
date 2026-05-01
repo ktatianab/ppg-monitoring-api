@@ -93,7 +93,7 @@ def get_monitoring_sessions_by_user(
     id_user: int,
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_compute_status:1"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

@@ -35,7 +35,7 @@ def create_metric_type(data: schemas.MetricTypeCreate, db: Session = Depends(get
 def get_metric_types(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: name:heart_rate, unit:bpm or min_value__gte:0"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

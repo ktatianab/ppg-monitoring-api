@@ -42,7 +42,7 @@ def create_measurement(data: schemas.MeasurementCreate, db: Session = Depends(ge
 def get_measurements(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_session:1 or value__gte:60"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

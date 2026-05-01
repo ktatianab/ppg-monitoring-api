@@ -84,7 +84,7 @@ def get_user_wearables(
     id_user: int,
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: id_wearable_model:2"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,

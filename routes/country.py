@@ -30,7 +30,7 @@ def create_country(country: schemas.CountryCreate, db: Session = Depends(get_db)
 def get_countries(
     query: Optional[str] = Query(
         default=None,
-        description="Filter records. Example: name:Colombia or name__contains:Col"
+        description="Filter records. <miembro>:<valor>"
     ),
     limit: Optional[int] = Query(
         default=None,
