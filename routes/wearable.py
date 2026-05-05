@@ -5,6 +5,7 @@ from typing import Optional
 import DTO.models as models
 import ORM.schemas as schemas
 from DAO.database import get_db
+from dependencies.auth_guard import TokenUser, get_current_user_from_token
 from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
@@ -13,11 +14,20 @@ router = APIRouter(
 )
 
 
+def _ensure_wearable_owner(wearable: models.Wearable, current_user: TokenUser):
+    if wearable.id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @router.post("/", response_model=schemas.WearableResponse)
-def create_wearable(data: schemas.WearableCreate, db: Session = Depends(get_db)):
+def create_wearable(
+    data: schemas.WearableCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
 
     user = db.query(models.App_user).filter(
-        models.App_user.id_user == data.id_user
+        models.App_user.id_user == current_user.user_id
     ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -28,7 +38,11 @@ def create_wearable(data: schemas.WearableCreate, db: Session = Depends(get_db))
     if not model:
         raise HTTPException(status_code=404, detail="Wearable model not found")
 
-    wearable = models.Wearable(**data.dict())
+    wearable = models.Wearable(
+        id_user=current_user.user_id,
+        id_wearable_model=data.id_wearable_model,
+        mac_address=data.mac_address,
+    )
 
     db.add(wearable)
     db.commit()
@@ -62,9 +76,12 @@ def get_wearables(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
-    db_query = db.query(models.Wearable)
+    db_query = db.query(models.Wearable).filter(
+        models.Wearable.id_user == current_user.user_id
+    )
 
     db_query = apply_get_query_params(
         db_query=db_query,
@@ -105,10 +122,14 @@ def get_user_wearables(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
+    if id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db_query = db.query(models.Wearable).filter(
-        models.Wearable.id_user == id_user
+        models.Wearable.id_user == current_user.user_id
     )
 
     db_query = apply_get_query_params(
@@ -125,22 +146,10 @@ def get_user_wearables(
 
 
 @router.get("/{id_wearable}", response_model=schemas.WearableResponse)
-def get_wearable(id_wearable: int, db: Session = Depends(get_db)):
-    wearable = db.query(models.Wearable).filter(
-        models.Wearable.id_wearable == id_wearable
-    ).first()
-
-    if not wearable:
-        raise HTTPException(status_code=404, detail="Wearable not found")
-
-    return wearable
-
-
-@router.put("/{id_wearable}", response_model=schemas.WearableResponse)
-def update_wearable(
+def get_wearable(
     id_wearable: int,
-    data: schemas.WearableCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
     wearable = db.query(models.Wearable).filter(
         models.Wearable.id_wearable == id_wearable
@@ -149,8 +158,29 @@ def update_wearable(
     if not wearable:
         raise HTTPException(status_code=404, detail="Wearable not found")
 
+    _ensure_wearable_owner(wearable, current_user)
+
+    return wearable
+
+
+@router.put("/{id_wearable}", response_model=schemas.WearableResponse)
+def update_wearable(
+    id_wearable: int,
+    data: schemas.WearableCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
+    wearable = db.query(models.Wearable).filter(
+        models.Wearable.id_wearable == id_wearable
+    ).first()
+
+    if not wearable:
+        raise HTTPException(status_code=404, detail="Wearable not found")
+
+    _ensure_wearable_owner(wearable, current_user)
+
     user = db.query(models.App_user).filter(
-        models.App_user.id_user == data.id_user
+        models.App_user.id_user == current_user.user_id
     ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -161,8 +191,9 @@ def update_wearable(
     if not model:
         raise HTTPException(status_code=404, detail="Wearable model not found")
 
-    for key, value in data.dict().items():
-        setattr(wearable, key, value)
+    wearable.id_user = current_user.user_id
+    wearable.id_wearable_model = data.id_wearable_model
+    wearable.mac_address = data.mac_address
 
     db.commit()
     db.refresh(wearable)
@@ -171,13 +202,19 @@ def update_wearable(
 
 
 @router.delete("/{id_wearable}")
-def delete_wearable(id_wearable: int, db: Session = Depends(get_db)):
+def delete_wearable(
+    id_wearable: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     wearable = db.query(models.Wearable).filter(
         models.Wearable.id_wearable == id_wearable
     ).first()
 
     if not wearable:
         raise HTTPException(status_code=404, detail="Wearable not found")
+
+    _ensure_wearable_owner(wearable, current_user)
 
     db.delete(wearable)
     db.commit()

@@ -34,7 +34,6 @@ class CityResponse(BaseModel):
 class AppUserCreate(BaseModel):
     id_city: int
     email: EmailStr
-    password: str
     first_name: str
     last_name: str
     birth_date: date
@@ -54,13 +53,8 @@ class AppUserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class AppUserLogin(BaseModel):
-    email: EmailStr
-    password: str
-
 
 class HealthRecordCreate(BaseModel):
-    id_user: int
     weight_kg: float
     height_cm: float
 
@@ -91,7 +85,6 @@ class WearableModelResponse(BaseModel):
         from_attributes = True
 
 class WearableCreate(BaseModel):
-    id_user: int
     id_wearable_model: int
     mac_address: str
 
@@ -109,7 +102,6 @@ class WearableResponse(BaseModel):
 
 
 class MonitoringSessionCreate(BaseModel):
-    id_user: int
     id_compute_status: int
     date_time: datetime
     is_delta_encoded: bool = False
