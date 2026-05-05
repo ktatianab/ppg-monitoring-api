@@ -5,6 +5,7 @@ from typing import Optional
 import DTO.models as models
 import ORM.schemas as schemas
 from DAO.database import get_db
+from dependencies.auth_guard import TokenUser, get_current_user_from_token
 from utils.query_builder import apply_get_query_params
  
 router = APIRouter( 
@@ -13,19 +14,40 @@ router = APIRouter(
 )
 
 
+def _ensure_session_owner(
+    session: models.MonitoringSession,
+    current_user: TokenUser,
+):
+    if session.id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @router.post("/", response_model=schemas.MonitoringSessionResponse)
 def create_monitoring_session(
     data: schemas.MonitoringSessionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
     user = db.query(models.App_user).filter(
-        models.App_user.id_user == data.id_user
+        models.App_user.id_user == current_user.user_id
     ).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    session = models.MonitoringSession(**data.dict())
+    compute_status = db.query(models.ComputeStatus).filter(
+        models.ComputeStatus.id_compute_status == data.id_compute_status
+    ).first()
+
+    if not compute_status:
+        raise HTTPException(status_code=404, detail="Compute status not found")
+
+    session = models.MonitoringSession(
+        id_user=current_user.user_id,
+        id_compute_status=data.id_compute_status,
+        date_time=data.date_time,
+        is_delta_encoded=data.is_delta_encoded,
+    )
 
     db.add(session)
     db.commit()
@@ -59,9 +81,12 @@ def get_monitoring_sessions(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
-    db_query = db.query(models.MonitoringSession)
+    db_query = db.query(models.MonitoringSession).filter(
+        models.MonitoringSession.id_user == current_user.user_id
+    )
 
     db_query = apply_get_query_params(
         db_query=db_query,
@@ -77,13 +102,19 @@ def get_monitoring_sessions(
 
 
 @router.get("/{id_session}", response_model=schemas.MonitoringSessionResponse)
-def get_monitoring_session(id_session: int, db: Session = Depends(get_db)):
+def get_monitoring_session(
+    id_session: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     session = db.query(models.MonitoringSession).filter(
         models.MonitoringSession.id_session == id_session
     ).first()
 
     if not session:
         raise HTTPException(status_code=404, detail="Monitoring session not found")
+
+    _ensure_session_owner(session, current_user)
 
     return session
 
@@ -114,10 +145,14 @@ def get_monitoring_sessions_by_user(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
+    if id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db_query = db.query(models.MonitoringSession).filter(
-        models.MonitoringSession.id_user == id_user
+        models.MonitoringSession.id_user == current_user.user_id
     )
 
     db_query = apply_get_query_params(
@@ -137,7 +172,8 @@ def get_monitoring_sessions_by_user(
 def update_monitoring_session(
     id_session: int,
     data: schemas.MonitoringSessionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
     session = db.query(models.MonitoringSession).filter(
         models.MonitoringSession.id_session == id_session
@@ -146,7 +182,16 @@ def update_monitoring_session(
     if not session:
         raise HTTPException(status_code=404, detail="Monitoring session not found")
 
-    session.id_user = data.id_user
+    _ensure_session_owner(session, current_user)
+
+    compute_status = db.query(models.ComputeStatus).filter(
+        models.ComputeStatus.id_compute_status == data.id_compute_status
+    ).first()
+
+    if not compute_status:
+        raise HTTPException(status_code=404, detail="Compute status not found")
+
+    session.id_user = current_user.user_id
     session.id_compute_status = data.id_compute_status
     session.date_time = data.date_time
     session.is_delta_encoded = data.is_delta_encoded
@@ -158,13 +203,19 @@ def update_monitoring_session(
 
 
 @router.delete("/{id_session}")
-def delete_monitoring_session(id_session: int, db: Session = Depends(get_db)):
+def delete_monitoring_session(
+    id_session: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     session = db.query(models.MonitoringSession).filter(
         models.MonitoringSession.id_session == id_session
     ).first()
 
     if not session:
         raise HTTPException(status_code=404, detail="Monitoring session not found")
+
+    _ensure_session_owner(session, current_user)
 
     db.delete(session)
     db.commit()

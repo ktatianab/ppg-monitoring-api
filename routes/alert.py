@@ -5,6 +5,7 @@ from typing import Optional
 import DTO.models as models
 import ORM.schemas as schemas
 from DAO.database import get_db
+from dependencies.auth_guard import TokenUser, get_current_user_from_token
 from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
@@ -13,14 +14,37 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=schemas.AlertResponse)
-def create_alert(data: schemas.AlertCreate, db: Session = Depends(get_db)):
-
+def _get_owned_session(
+    db: Session,
+    id_session: int,
+    current_user: TokenUser,
+) -> models.MonitoringSession:
     session = db.query(models.MonitoringSession).filter(
-        models.MonitoringSession.id_session == data.id_session
+        models.MonitoringSession.id_session == id_session
     ).first()
+
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return session
+
+
+def _ensure_alert_owner(alert: models.Alert, current_user: TokenUser):
+    if alert.session.id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@router.post("/", response_model=schemas.AlertResponse)
+def create_alert(
+    data: schemas.AlertCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
+
+    _get_owned_session(db, data.id_session, current_user)
 
     severity = db.query(models.SeverityLevel).filter(
         models.SeverityLevel.id_severity_level == data.id_severity_level
@@ -62,9 +86,12 @@ def get_alerts(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
-    db_query = db.query(models.Alert)
+    db_query = db.query(models.Alert).join(models.Alert.session).filter(
+        models.MonitoringSession.id_user == current_user.user_id
+    )
 
     db_query = apply_get_query_params(
         db_query=db_query,
@@ -105,8 +132,11 @@ def get_alerts_by_session(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
+    _get_owned_session(db, id_session, current_user)
+
     db_query = db.query(models.Alert).filter(
         models.Alert.id_session == id_session
     )
@@ -125,7 +155,11 @@ def get_alerts_by_session(
 
 
 @router.get("/{id_alert}", response_model=schemas.AlertResponse)
-def get_alert(id_alert: int, db: Session = Depends(get_db)):
+def get_alert(
+    id_alert: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     alert = db.query(models.Alert).filter(
         models.Alert.id_alert == id_alert
     ).first()
@@ -133,11 +167,18 @@ def get_alert(id_alert: int, db: Session = Depends(get_db)):
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
+    _ensure_alert_owner(alert, current_user)
+
     return alert
 
 
 @router.put("/{id_alert}", response_model=schemas.AlertResponse)
-def update_alert(id_alert: int, data: schemas.AlertCreate, db: Session = Depends(get_db)):
+def update_alert(
+    id_alert: int,
+    data: schemas.AlertCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     
     alert = db.query(models.Alert).filter(
         models.Alert.id_alert == id_alert
@@ -146,11 +187,8 @@ def update_alert(id_alert: int, data: schemas.AlertCreate, db: Session = Depends
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
-    session = db.query(models.MonitoringSession).filter(
-        models.MonitoringSession.id_session == data.id_session
-    ).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    _ensure_alert_owner(alert, current_user)
+    _get_owned_session(db, data.id_session, current_user)
 
     severity = db.query(models.SeverityLevel).filter(
         models.SeverityLevel.id_severity_level == data.id_severity_level
@@ -168,13 +206,19 @@ def update_alert(id_alert: int, data: schemas.AlertCreate, db: Session = Depends
 
 
 @router.delete("/{id_alert}")
-def delete_alert(id_alert: int, db: Session = Depends(get_db)):
+def delete_alert(
+    id_alert: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     alert = db.query(models.Alert).filter(
         models.Alert.id_alert == id_alert
     ).first()
 
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
+
+    _ensure_alert_owner(alert, current_user)
 
     db.delete(alert)
     db.commit()

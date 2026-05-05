@@ -5,6 +5,7 @@ from typing import Optional
 import DTO.models as models
 import ORM.schemas as schemas
 from DAO.database import get_db
+from dependencies.auth_guard import TokenUser, get_current_user_from_token
 from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
@@ -14,28 +15,11 @@ router = APIRouter(
 
 
 @router.post("/", response_model=schemas.AppUserResponse)
-def create_user(user: schemas.AppUserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(models.App_user).filter(
-        models.App_user.email == user.email
-    ).first()
-
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    db_user = models.App_user(
-        id_city=user.id_city,
-        email=user.email,
-        password_hash=user.password,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        birth_date=user.birth_date
+def create_user(*_args, **_kwargs):
+    raise HTTPException(
+        status_code=405,
+        detail="User registration is handled by MS AUTH",
     )
-
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-
-    return db_user
 
 
 @router.get("/", response_model=list[schemas.AppUserResponse])
@@ -63,9 +47,12 @@ def get_users(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
-    db_query = db.query(models.App_user)
+    db_query = db.query(models.App_user).filter(
+        models.App_user.id_user == current_user.user_id
+    )
 
     db_query = apply_get_query_params(
         db_query=db_query,
@@ -81,7 +68,14 @@ def get_users(
 
 
 @router.get("/{id_user}", response_model=schemas.AppUserResponse)
-def get_user(id_user: int, db: Session = Depends(get_db)):
+def get_user(
+    id_user: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
+    if id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     user = db.query(models.App_user).filter(
         models.App_user.id_user == id_user
     ).first()
@@ -96,8 +90,12 @@ def get_user(id_user: int, db: Session = Depends(get_db)):
 def update_user(
     id_user: int,
     user_data: schemas.AppUserCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
+    if id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     user = db.query(models.App_user).filter(
         models.App_user.id_user == id_user
     ).first()
@@ -105,9 +103,15 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    city = db.query(models.City).filter(
+        models.City.id_city == user_data.id_city
+    ).first()
+
+    if city is None:
+        raise HTTPException(status_code=404, detail="City not found")
+
     user.id_city = user_data.id_city
     user.email = user_data.email
-    user.password_hash = user_data.password
     user.first_name = user_data.first_name
     user.last_name = user_data.last_name
     user.birth_date = user_data.birth_date
@@ -119,7 +123,14 @@ def update_user(
 
 
 @router.delete("/{id_user}")
-def delete_user(id_user: int, db: Session = Depends(get_db)):
+def delete_user(
+    id_user: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
+    if id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     user = db.query(models.App_user).filter(
         models.App_user.id_user == id_user
     ).first()

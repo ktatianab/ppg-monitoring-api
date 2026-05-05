@@ -29,7 +29,6 @@ class App_user(Base):
     id_city = Column(Integer, ForeignKey("city.id_city"), nullable=False)
 
     email = Column(String(50), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
 
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
