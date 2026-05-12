@@ -5,6 +5,7 @@ from typing import Optional
 import DTO.models as models
 import ORM.schemas as schemas
 from DAO.database import get_db
+from dependencies.auth_guard import TokenUser, get_current_user_from_token
 from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
@@ -13,18 +14,27 @@ router = APIRouter(
 )
 
 
+def _ensure_record_owner(record: models.HealthRecord, current_user: TokenUser):
+    if record.id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @router.post("/", response_model=schemas.HealthRecordResponse)
-def create_health_record(data: schemas.HealthRecordCreate, db: Session = Depends(get_db)):
+def create_health_record(
+    data: schemas.HealthRecordCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     
     user = db.query(models.App_user).filter(
-        models.App_user.id_user == data.id_user
+        models.App_user.id_user == current_user.user_id
     ).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     record = models.HealthRecord(
-        id_user=data.id_user,
+        id_user=current_user.user_id,
         weight_kg=data.weight_kg,
         height_cm=data.height_cm
     )
@@ -61,9 +71,12 @@ def get_records(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
-    db_query = db.query(models.HealthRecord)
+    db_query = db.query(models.HealthRecord).filter(
+        models.HealthRecord.id_user == current_user.user_id
+    )
 
     db_query = apply_get_query_params(
         db_query=db_query,
@@ -79,22 +92,10 @@ def get_records(
 
 
 @router.get("/{id_record}", response_model=schemas.HealthRecordResponse)
-def get_record(id_record: int, db: Session = Depends(get_db)):
-    record = db.query(models.HealthRecord).filter(
-        models.HealthRecord.id_health_record == id_record
-    ).first()
-
-    if not record:
-        raise HTTPException(status_code=404, detail="Record not found")
-
-    return record
-
-
-@router.put("/{id_record}", response_model=schemas.HealthRecordResponse)
-def update_record(
+def get_record(
     id_record: int,
-    data: schemas.HealthRecordCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
     record = db.query(models.HealthRecord).filter(
         models.HealthRecord.id_health_record == id_record
@@ -103,7 +104,28 @@ def update_record(
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
 
-    record.id_user = data.id_user
+    _ensure_record_owner(record, current_user)
+
+    return record
+
+
+@router.put("/{id_record}", response_model=schemas.HealthRecordResponse)
+def update_record(
+    id_record: int,
+    data: schemas.HealthRecordCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
+    record = db.query(models.HealthRecord).filter(
+        models.HealthRecord.id_health_record == id_record
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    _ensure_record_owner(record, current_user)
+
+    record.id_user = current_user.user_id
     record.weight_kg = data.weight_kg
     record.height_cm = data.height_cm
 
@@ -114,13 +136,19 @@ def update_record(
 
 
 @router.delete("/{id_record}")
-def delete_record(id_record: int, db: Session = Depends(get_db)):
+def delete_record(
+    id_record: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     record = db.query(models.HealthRecord).filter(
         models.HealthRecord.id_health_record == id_record
     ).first()
 
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
+
+    _ensure_record_owner(record, current_user)
 
     db.delete(record)
     db.commit()

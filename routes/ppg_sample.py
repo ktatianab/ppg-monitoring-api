@@ -5,6 +5,7 @@ from typing import Optional
 import DTO.models as models
 import ORM.schemas as schemas
 from DAO.database import get_db
+from dependencies.auth_guard import TokenUser, get_current_user_from_token
 from utils.query_builder import apply_get_query_params
 
 router = APIRouter(
@@ -13,15 +14,37 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=schemas.PpgSampleResponse)
-def create_sample(data: schemas.PpgSampleCreate, db: Session = Depends(get_db)):
-
+def _get_owned_session(
+    db: Session,
+    id_session: int,
+    current_user: TokenUser,
+) -> models.MonitoringSession:
     session = db.query(models.MonitoringSession).filter(
-        models.MonitoringSession.id_session == data.id_session
+        models.MonitoringSession.id_session == id_session
     ).first()
 
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return session
+
+
+def _ensure_sample_owner(sample: models.PpgSample, current_user: TokenUser):
+    if sample.session.id_user != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@router.post("/", response_model=schemas.PpgSampleResponse)
+def create_sample(
+    data: schemas.PpgSampleCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
+
+    _get_owned_session(db, data.id_session, current_user)
 
     sample = models.PpgSample(**data.dict())
 
@@ -57,9 +80,12 @@ def get_samples(
         pattern="^(asc|desc)$",
         description="Sort direction: asc or desc"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
-    db_query = db.query(models.PpgSample)
+    db_query = db.query(models.PpgSample).join(models.PpgSample.session).filter(
+        models.MonitoringSession.id_user == current_user.user_id
+    )
 
     db_query = apply_get_query_params(
         db_query=db_query,
@@ -82,8 +108,11 @@ def get_samples_by_session(
     offset: Optional[int] = Query(default=None, ge=0),
     orderBy: Optional[str] = Query(default=None),
     sort: Optional[str] = Query(default="asc", pattern="^(asc|desc)$"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
 ):
+    _get_owned_session(db, id_session, current_user)
+
     db_query = db.query(models.PpgSample).filter(
         models.PpgSample.id_session == id_session
     )
@@ -102,13 +131,19 @@ def get_samples_by_session(
 
 
 @router.delete("/{id_sample}")
-def delete_sample(id_sample: int, db: Session = Depends(get_db)):
+def delete_sample(
+    id_sample: int,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
     sample = db.query(models.PpgSample).filter(
         models.PpgSample.id_ppg_sample == id_sample
     ).first()
 
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
+
+    _ensure_sample_owner(sample, current_user)
 
     db.delete(sample)
     db.commit()
@@ -117,7 +152,14 @@ def delete_sample(id_sample: int, db: Session = Depends(get_db)):
 
 
 @router.post("/bulk")
-def create_samples_bulk(data: list[schemas.PpgSampleCreate], db: Session = Depends(get_db)):
+def create_samples_bulk(
+    data: list[schemas.PpgSampleCreate],
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
+    for item in data:
+        _get_owned_session(db, item.id_session, current_user)
+
     samples = [models.PpgSample(**item.dict()) for item in data]
 
     db.bulk_save_objects(samples)
@@ -127,7 +169,12 @@ def create_samples_bulk(data: list[schemas.PpgSampleCreate], db: Session = Depen
 
 
 @router.put("/{id_sample}", response_model=schemas.PpgSampleResponse)
-def update_sample(id_sample: int, data: schemas.PpgSampleCreate, db: Session = Depends(get_db)):
+def update_sample(
+    id_sample: int,
+    data: schemas.PpgSampleCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenUser = Depends(get_current_user_from_token),
+):
 
     sample = db.query(models.PpgSample).filter(
         models.PpgSample.id_ppg_sample == id_sample
@@ -136,12 +183,8 @@ def update_sample(id_sample: int, data: schemas.PpgSampleCreate, db: Session = D
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
 
-    session = db.query(models.MonitoringSession).filter(
-        models.MonitoringSession.id_session == data.id_session
-    ).first()
-
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    _ensure_sample_owner(sample, current_user)
+    _get_owned_session(db, data.id_session, current_user)
 
     for key, value in data.dict().items():
         setattr(sample, key, value)
