@@ -15,15 +15,26 @@ class CountryResponse(BaseModel):
         from_attributes = True
 
 
+class RegionCreate(BaseModel):
+    name: str
+    id_country: int
+
+class RegionResponse(BaseModel):
+    id_region: int
+    name: str
+    id_country: int
+
+    class Config:
+        from_attributes = True
 
 class CityCreate(BaseModel):
     name: str
-    id_country: int
+    id_region: int
 
 class CityResponse(BaseModel):
     id_city: int
     name: str
-    id_country: int
+    id_region: int
 
     class Config:
         from_attributes = True

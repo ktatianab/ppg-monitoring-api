@@ -16,16 +16,16 @@ router = APIRouter(
 @router.post("/", response_model=schemas.CityResponse, status_code=201)
 def create_city(city: schemas.CityCreate, db: Session = Depends(get_db)):  
     
-    country = db.query(models.Country).filter(
-        models.Country.id_country == city.id_country
+    region = db.query(models.Region).filter(
+        models.Region.id_region == city.id_region
     ).first()
 
-    if country is None:
-        raise HTTPException(status_code=404, detail="País no encontrado")
+    if region is None:
+        raise HTTPException(status_code=404, detail="Región no encontrada")
 
     db_city = models.City(
         name=city.name,
-        id_country=city.id_country
+        id_region=city.id_region
     )
 
     db.add(db_city)
@@ -99,15 +99,15 @@ def update_city(city_id: int, data: schemas.CityCreate, db: Session = Depends(ge
     if city is None:
         raise HTTPException(status_code=404, detail="Ciudad no encontrada")
 
-    country = db.query(models.Country).filter(
-        models.Country.id_country == data.id_country
+    region = db.query(models.Region).filter(
+        models.Region.id_region == data.id_region
     ).first()
 
-    if country is None:
-        raise HTTPException(status_code=404, detail="País no encontrado")
+    if region is None:
+        raise HTTPException(status_code=404, detail="Región no encontrada")
 
     city.name = data.name
-    city.id_country = data.id_country
+    city.id_region = data.id_region
 
     db.commit()
     db.refresh(city)
